@@ -1,10 +1,16 @@
 # NoSleep
 
+[![release](https://img.shields.io/github/v/release/cpmacatangay/nosleep?label=download)](https://github.com/cpmacatangay/nosleep/releases/latest)
+[![build](https://img.shields.io/github/actions/workflow/status/cpmacatangay/nosleep/release.yml?label=build)](https://github.com/cpmacatangay/nosleep/actions)
+
 A one-click wake lock for Windows. Click the tray icon once and the machine
 neither sleeps nor turns off its display, until you click again.
 
 Built for laptops whose sleep timeout is set by policy and cannot be changed, and
 where every sleep costs a re-login and the loss of working context.
+
+**[Download the latest build](../../releases/latest/download/NoSleep-win64.zip)** —
+unzip anywhere and run `NoSleep.exe`. Nothing is installed.
 
 ```
   Off                                On
@@ -122,7 +128,7 @@ gh release download --pattern 'NoSleep-win64.zip'
 The asset name is deliberately constant, so the latest build always lives at:
 
 ```text
-https://github.com/<owner>/nosleep/releases/latest/download/NoSleep-win64.zip
+https://github.com/cpmacatangay/nosleep/releases/latest/download/NoSleep-win64.zip
 ```
 
 ## Build
