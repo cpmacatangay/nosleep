@@ -3,7 +3,7 @@
 [![release](https://img.shields.io/github/v/release/cpmacatangay/nosleep?label=download)](https://github.com/cpmacatangay/nosleep/releases/latest)
 [![build](https://img.shields.io/github/actions/workflow/status/cpmacatangay/nosleep/release.yml?label=build)](https://github.com/cpmacatangay/nosleep/actions)
 
-**v2026.11.1** · Windows 10/11 (x64) · one executable under 1 MB · no installer
+**v2026.11.2** · Windows 10/11 (x64) · one executable under 1 MB · no installer
 
 One click keeps your PC awake. Built for laptops whose sleep timeout is set by
 policy, where every sleep costs a re-login and the work you had open.
@@ -56,7 +56,7 @@ released and normal power behaviour resumes immediately.
 | Security policy | never touches power plans, policy, or the registry |
 | Enforced inactivity lock | if IT set one, the screen locks anyway |
 | Lid close, critical battery | firmware and Windows decide; NoSleep does not interfere |
-| Autostart | none; launch it yourself |
+| Autostart | off until you tick it in the menu |
 
 ## Verify
 

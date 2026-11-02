@@ -56,11 +56,10 @@ NoSleep $version - one-click wake lock for Windows
 WHAT IT DOES
   Left-click the tray icon once: this PC stops sleeping and its display stays on.
   Left-click again: normal sleep behaviour returns.
-  Right-click the icon: menu (toggle, Quit).
+  Right-click the icon: menu with Keep awake, Start with Windows, and Quit.
 
 HOW TO START
   1. Copy this folder anywhere, for example  %LOCALAPPDATA%\NoSleep\
-     It also runs directly from a USB stick; it writes nothing.
   2. Double-click NoSleep.exe.
   3. If Windows shows "Windows protected your PC", click More info -> Run anyway.
      If that link is missing, this command removes the downloaded-file mark:
@@ -77,6 +76,13 @@ HOW TO STOP IT
   complete uninstall. Killing the process from Task Manager also restores
   normal power behaviour immediately.
 
+START WITH WINDOWS (OPTIONAL, OFF BY DEFAULT)
+  Right-click the icon -> Start with Windows.
+  This writes one value under HKCU\Software\Microsoft\Windows\CurrentVersion\Run
+  so the app starts when you sign in. No administrator rights are needed, and
+  Windows lists it under Settings -> Apps -> Startup, where you can disable it
+  without touching NoSleep. Untick the menu item to remove the value again.
+
 TO CONFIRM IT WORKS
   Open a terminal in this folder and run:
 
@@ -92,12 +98,13 @@ TO CONFIRM IT WORKS
   No recent event 42 means the machine did not sleep.
 
 WHAT IT DOES NOT DO
-  - It does not change power plans, policy, or the registry.
+  - It does not change power plans or policy. The only registry value it ever
+    writes is the optional Start with Windows entry described above.
   - It cannot defeat an enforced inactivity lock (if IT set one, the screen
     locks anyway).
   - It does not prevent sleep when the lid is closed, or hibernation at
     critically low battery.
-  - It does not start with Windows. Launch it yourself.
+  - It does not start with Windows unless you tick the menu item.
 
 REQUIREMENTS
   Windows 10 1809+ or Windows 11, 64-bit. Nothing else - no runtime, no
