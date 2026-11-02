@@ -15,7 +15,7 @@ jobs:
 
     steps:
       - name: Check out
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -24,6 +24,9 @@ jobs:
 
       - name: Unit tests
         run: cargo test --release
+
+      - name: Build release binary
+        run: cargo build --release
 
       - name: Static verification
         shell: pwsh

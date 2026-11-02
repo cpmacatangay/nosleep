@@ -68,9 +68,23 @@ if ($dumpbin) {
 }
 
 # --- 3. power API --------------------------------------------------------
-& $exe --diagnose | Out-Null
-if ($LASTEXITCODE -eq 0) { Pass 'wake request' 'accepted by the OS' }
-else { Fail 'wake request' "SetThreadExecutionState refused (exit $LASTEXITCODE)" }
+# Start-Process -Wait is used rather than the call operator because a GUI-
+# subsystem executable is not reliably awaited by PowerShell, which would make
+# the exit code meaningless. Output is redirected so the report stays readable.
+$stdout = [IO.Path]::GetTempFileName()
+$stderr = [IO.Path]::GetTempFileName()
+try {
+    $diag = Start-Process -FilePath $exe -ArgumentList '--diagnose' -NoNewWindow -Wait -PassThru `
+        -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+    if ($diag.ExitCode -eq 0) { Pass 'wake request' 'accepted by the OS' }
+    else {
+        Fail 'wake request' "SetThreadExecutionState refused (exit $($diag.ExitCode))"
+        Get-Content $stdout | ForEach-Object { Info 'diagnose output' $_ }
+    }
+}
+finally {
+    Remove-Item $stdout, $stderr -Force -ErrorAction SilentlyContinue
+}
 
 # --- 4. runtime ----------------------------------------------------------
 if ($StaticOnly) {
