@@ -1,0 +1,9 @@
+# Only the generated spec-kit command definitions belong in the repository.
+#
+# The agent folder can also hold local settings, caches, and credentials that
+# OpenCode writes as you use it. None of that should ever be committed, so the
+# rule is deny-by-default: everything here is ignored unless explicitly allowed.
+*
+!.gitignore
+!commands/
+!commands/**
