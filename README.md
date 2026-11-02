@@ -70,6 +70,34 @@ Get-WinEvent -FilterHashtable @{LogName='System'; Id=42,107; StartTime=(Get-Date
 
 No event `42` (sleep) in the window means it worked.
 
+## Portable package
+
+To produce a folder and a zip that can be carried to another machine:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\package.ps1
+```
+
+Output:
+
+```text
+dist\NoSleep\NoSleep.exe     the application, self-contained
+dist\NoSleep\README.txt      instructions for the target machine
+dist\NoSleep\SHA256.txt      checksum, to confirm the copy survived transfer
+dist\NoSleep-0.1.0-win64.zip
+```
+
+The executable has no external dependencies, reads no files, and writes none, so
+the folder runs in place — from `%LOCALAPPDATA%`, from a USB stick, from a path
+with spaces. There is nothing to install and nothing to uninstall; deleting the
+executable is a complete removal.
+
+When transferring, prefer a USB stick or clear the download mark on arrival:
+
+```powershell
+Unblock-File .\NoSleep.exe
+```
+
 ## Build
 
 Requires Rust (MSVC toolchain) and the Visual C++ build tools.
