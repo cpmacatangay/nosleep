@@ -19,8 +19,8 @@ use windows_sys::Win32::UI::WindowsAndMessaging::{CreateIconIndirect, ICONINFO, 
 
 pub type HIcon = *mut c_void;
 
-/// Amber disc for On, neutral ring for Off.
-pub const AWAKE_RGB: (u8, u8, u8) = (240, 168, 48);
+/// Green disc for On, neutral ring for Off.
+pub const AWAKE_RGB: (u8, u8, u8) = (63, 185, 80);
 pub const ASLEEP_RGB: (u8, u8, u8) = (150, 156, 164);
 
 #[derive(Clone, Copy)]
@@ -191,6 +191,17 @@ mod tests {
         let disc = pixels(Style::Disc);
         let ring = pixels(Style::Ring);
         assert_ne!(disc, ring, "On and Off artwork must differ");
+    }
+
+    #[test]
+    fn the_on_state_colour_is_green() {
+        let (r, g, b) = super::AWAKE_RGB;
+        assert!(
+            g > r && g > b,
+            "On must read as green, got ({r}, {g}, {b})"
+        );
+        // Still a solid, not a near-black or a washed-out tint.
+        assert!(g >= 120 && g <= 230, "green channel out of range: {g}");
     }
 
     #[test]

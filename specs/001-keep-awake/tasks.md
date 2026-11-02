@@ -48,7 +48,7 @@ outstanding because it must run on the target machine on battery.
 
 ## Phase 4: User Story 2 — Read the state at a glance (P1)
 
-- [x] T012 [US2] Render distinct On/Off artwork: solid amber disc vs hollow grey ring
+- [x] T012 [US2] Render distinct On/Off artwork: solid green disc vs hollow grey ring
 - [x] T013 [US2] Update the tooltip on every state change with explicit words
 
 ---

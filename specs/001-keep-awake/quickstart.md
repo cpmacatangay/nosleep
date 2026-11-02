@@ -37,7 +37,7 @@ working around, **on battery**.
 | # | Step | Pass condition |
 |---|---|---|
 | 1 | `nosleep.exe --diagnose` | `accepted : yes`, exit code 0 |
-| 2 | Start the app, unplug the charger, click the icon once (icon turns solid amber) | Icon changes, tooltip reads "keeping this PC awake" |
+| 2 | Start the app, unplug the charger, click the icon once (icon turns solid green) | Icon changes, tooltip reads "keeping this PC awake" |
 | 3 | Do not touch the machine for 1.5× the configured sleep timeout | Screen stays on; no lock screen; session intact |
 | 4 | `Get-WinEvent -FilterHashtable @{LogName='System'; Id=42; StartTime=(Get-Date).AddHours(-1)}` | No sleep event during the window |
 | 5 | Click the icon once (icon returns to the ring) and leave it | Display turns off and the machine sleeps within one timeout |
