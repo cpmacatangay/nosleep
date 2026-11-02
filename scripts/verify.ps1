@@ -14,12 +14,17 @@
     Everything here is read-only except starting and stopping our own process.
 #>
 param(
-    [switch]$StaticOnly
+    [switch]$StaticOnly,
+    [string]$Exe = ''
 )
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
-$exe = Join-Path $root 'target\release\nosleep.exe'
+if ([string]::IsNullOrWhiteSpace($Exe)) {
+    $exe = Join-Path $root 'target\release\nosleep.exe'
+} else {
+    $exe = if ([IO.Path]::IsPathRooted($Exe)) { $Exe } else { Join-Path $root $Exe }
+}
 $budgetBytes = 1MB
 
 if (-not (Test-Path $exe)) {

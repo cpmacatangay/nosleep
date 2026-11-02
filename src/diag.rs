@@ -7,7 +7,9 @@
 use std::ptr::null_mut;
 
 use windows_sys::Win32::Foundation::INVALID_HANDLE_VALUE;
-use windows_sys::Win32::Storage::FileSystem::{GetFileType, WriteFile, FILE_TYPE_CHAR, FILE_TYPE_PIPE};
+use windows_sys::Win32::Storage::FileSystem::{
+    GetFileType, WriteFile, FILE_TYPE_CHAR, FILE_TYPE_DISK, FILE_TYPE_PIPE,
+};
 use windows_sys::Win32::System::Console::{GetStdHandle, STD_OUTPUT_HANDLE};
 use windows_sys::Win32::UI::WindowsAndMessaging::{MessageBoxW, MB_ICONINFORMATION, MB_OK};
 
@@ -57,7 +59,8 @@ fn emit(text: &str) {
         } else {
             GetFileType(handle)
         };
-        let writable = kind == FILE_TYPE_CHAR || kind == FILE_TYPE_PIPE;
+        let writable =
+            kind == FILE_TYPE_CHAR || kind == FILE_TYPE_PIPE || kind == FILE_TYPE_DISK;
 
         if writable {
             let mut written = 0u32;
