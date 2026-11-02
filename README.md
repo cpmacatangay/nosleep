@@ -118,17 +118,31 @@ packaging script, then attaches `NoSleep-0.1.0-win64.zip` to a GitHub release. I
 also fails the build if the tag and the version in `Cargo.toml` disagree.
 
 Downloading a release asset attaches a Mark-of-the-Web, so Windows will show
-"Windows protected your PC" on first launch. Either clear it, or download with the
-GitHub CLI, which does not add the mark:
+"Windows protected your PC" on first launch. Two ways to avoid it entirely.
+
+**Install without ever touching a browser** — PowerShell sets no download mark,
+and `Expand-Archive` does not propagate one:
 
 ```powershell
-gh release download --pattern 'NoSleep-win64.zip'
+$d = "$env:LOCALAPPDATA\NoSleep"
+New-Item -ItemType Directory -Force $d | Out-Null
+Invoke-WebRequest https://github.com/cpmacatangay/nosleep/releases/latest/download/NoSleep-win64.zip -OutFile "$env:TEMP\NoSleep.zip"
+Expand-Archive "$env:TEMP\NoSleep.zip" -DestinationPath $d -Force
+& "$d\NoSleep.exe"
 ```
 
-The asset name is deliberately constant, so the latest build always lives at:
+**Or clear the mark after the fact:**
 
-```text
-https://github.com/cpmacatangay/nosleep/releases/latest/download/NoSleep-win64.zip
+```powershell
+Unblock-File .\NoSleep.exe
+```
+
+Note that extracting with Windows Explorer's *Extract All* copies the mark from
+the zip onto the executable, so unblocking the **zip before extracting** also
+works. Check either file with:
+
+```powershell
+Get-Item .\NoSleep.exe -Stream Zone.Identifier    # no output means no mark
 ```
 
 ## Build
