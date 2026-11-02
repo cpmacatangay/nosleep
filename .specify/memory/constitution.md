@@ -1,8 +1,10 @@
 <!--
 SYNC IMPACT REPORT
-Version change: (new) → 1.0.0
-Modified principles: n/a (initial ratification)
-Added sections: Core Principles I–V, Additional Constraints, Development Workflow, Governance
+Version change: 1.0.0 → 1.1.0
+Bump rationale: MINOR - Principle IV gains a narrow carve-out permitting one
+  optional registry value for autostart. No principle removed or redefined.
+Modified principles: IV. Zero Side Effects (amended)
+Added sections: none
 Removed sections: none
 Follow-up TODOs: none
 -->
@@ -45,12 +47,18 @@ practical safeguard: the app must never claim to do something it cannot.
 
 ### IV. Zero Side Effects
 
-The utility MUST NOT access the network, emit telemetry, write files, write registry keys, or display
-notifications the user did not ask for. It MUST consume no measurable CPU while idle. Distribution MUST
-be a single self-contained executable; removal MUST be deletion of that file, with no residue.
+The utility MUST NOT access the network, emit telemetry, write files, or display notifications the user
+did not ask for. It MUST consume no measurable CPU while idle. Distribution MUST be a single
+self-contained executable; removal MUST be deletion of that file, with no residue.
+
+Autostart is the single permitted persistent change. When the user explicitly enables it, the utility
+MAY write exactly one value under `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` pointing at its
+own executable, and MUST remove that value when disabled. No other registry key may be written, and no
+file may be created for this purpose.
 
 Rationale: non-invasiveness is a functional requirement, not a stylistic preference. A user must be
-able to verify the entire footprint by looking at one file.
+able to verify the entire footprint by looking at one file, plus — only if they asked for autostart —
+one registry value they can see and disable from Windows itself.
 
 ### V. Tiny by Construction (NON-NEGOTIABLE)
 
@@ -95,4 +103,4 @@ new or materially expanded principle, PATCH for clarification), and an update to
 specification or plan. Compliance with Principles I–V is reviewed at every convergence step. Complexity
 that violates a budget MUST be removed rather than justified.
 
-**Version**: 1.0.0 | **Ratified**: 2026-11-02 | **Last Amended**: 2026-11-02
+**Version**: 1.1.0 | **Ratified**: 2026-11-02 | **Last Amended**: 2026-11-02

@@ -3,7 +3,9 @@
 use std::ptr::null_mut;
 
 use windows_sys::Win32::Foundation::HWND;
-use windows_sys::Win32::UI::WindowsAndMessaging::{WM_CONTEXTMENU, WM_LBUTTONUP, WM_RBUTTONUP};
+use windows_sys::Win32::UI::WindowsAndMessaging::{
+    KillTimer, SetTimer, WM_CONTEXTMENU, WM_LBUTTONUP, WM_RBUTTONUP,
+};
 
 use crate::icon::{self, HIcon, ASLEEP_RGB, AWAKE_RGB};
 use crate::power::PowerGuard;
@@ -14,6 +16,12 @@ use crate::tray;
 /// the handling code rather than hidden behind a bindgen name.
 const NIN_SELECT: u32 = 0x0400;
 const NIN_KEYSELECT: u32 = 0x0401;
+
+/// Adding a tray icon can fail if Explorer's notification area is not ready yet,
+/// which happens on a slow sign-in. Retry briefly rather than giving up.
+const RETRY_TIMER: usize = 1;
+const RETRY_INTERVAL_MS: u32 = 2000;
+const RETRY_LIMIT: u32 = 15;
 
 /// What the window procedure should do after a tray callback.
 pub enum Action {
@@ -30,6 +38,7 @@ pub struct App {
     icon_off: HIcon,
     version4: bool,
     tray_added: bool,
+    retries: u32,
     power: PowerGuard,
     closed: bool,
 }
@@ -47,6 +56,7 @@ impl App {
             icon_off: icon::render(size, icon::Style::Ring, ASLEEP_RGB),
             version4: false,
             tray_added: false,
+            retries: 0,
             power: PowerGuard::new(),
             closed: false,
         }
@@ -55,11 +65,9 @@ impl App {
     pub fn attach(&mut self, hwnd: HWND, callback: u32) {
         self.hwnd = hwnd;
         self.callback = callback;
-        self.tray_added = tray::add(hwnd, callback, self.current_icon(), self.state.tooltip());
-        if self.tray_added {
-            self.version4 = tray::set_version(hwnd, callback);
-            // Publish the tooltip again, now that version-4 tooltips are active.
-            self.refresh();
+        self.try_add();
+        if !self.tray_added {
+            self.schedule_retry();
         }
     }
 
@@ -68,6 +76,13 @@ impl App {
         if self.closed {
             return;
         }
+        self.try_add();
+        if !self.tray_added {
+            self.schedule_retry();
+        }
+    }
+
+    fn try_add(&mut self) {
         self.tray_added = tray::add(
             self.hwnd,
             self.callback,
@@ -76,8 +91,39 @@ impl App {
         );
         if self.tray_added {
             self.version4 = tray::set_version(self.hwnd, self.callback);
+            // Publish the tooltip again, now that version-4 tooltips are active.
+            self.refresh();
         }
-        self.refresh();
+    }
+
+    fn schedule_retry(&self) {
+        // SAFETY: the window handle is live; the timer posts WM_TIMER to it.
+        unsafe {
+            SetTimer(self.hwnd, RETRY_TIMER, RETRY_INTERVAL_MS, None);
+        }
+    }
+
+    /// Called from `WM_TIMER`. Stops itself once the icon is up or attempts run out.
+    pub fn on_timer(&mut self, timer_id: usize) {
+        if timer_id != RETRY_TIMER {
+            return;
+        }
+        if self.closed || self.tray_added {
+            self.cancel_retry();
+            return;
+        }
+        self.retries += 1;
+        self.try_add();
+        if self.tray_added || self.retries >= RETRY_LIMIT {
+            self.cancel_retry();
+        }
+    }
+
+    fn cancel_retry(&self) {
+        // SAFETY: killing a timer that may not exist is harmless.
+        unsafe {
+            KillTimer(self.hwnd, RETRY_TIMER);
+        }
     }
 
     pub fn on_tray_event(&self, event: u32) -> Action {
@@ -118,6 +164,7 @@ impl App {
             return;
         }
         self.closed = true;
+        self.cancel_retry();
         self.power.release();
         if self.tray_added {
             tray::remove(self.hwnd, self.callback);

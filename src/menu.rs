@@ -3,6 +3,9 @@
 //! Shown with `TPM_RETURNCMD` so the result is a plain value instead of a
 //! `WM_COMMAND` message, which keeps the window procedure free of a second
 //! dispatch path.
+//!
+//! Every check mark is derived from the caller's freshly read state, never from
+//! a cached boolean, so the menu cannot show something that is not true.
 
 use windows_sys::Win32::Foundation::{HWND, POINT};
 use windows_sys::Win32::UI::WindowsAndMessaging::{
@@ -15,9 +18,10 @@ use crate::util::wide;
 
 pub const CMD_TOGGLE: usize = 1;
 pub const CMD_QUIT: usize = 2;
+pub const CMD_AUTOSTART: usize = 3;
 
 /// Show the menu at the pointer and return the chosen command, or 0.
-pub fn show(hwnd: HWND, awake: bool) -> usize {
+pub fn show(hwnd: HWND, awake: bool, autostart: bool) -> usize {
     // SAFETY: every handle is created here and destroyed here; the wide strings
     // outlive the calls that borrow them.
     unsafe {
@@ -27,10 +31,21 @@ pub fn show(hwnd: HWND, awake: bool) -> usize {
         }
 
         let toggle_text = wide(if awake { "Keeping awake" } else { "Keep awake" });
+        let autostart_text = wide("Start with Windows");
         let quit_text = wide("Quit");
-        let check = if awake { MF_CHECKED } else { MF_UNCHECKED };
 
-        AppendMenuW(menu, MF_STRING | check, CMD_TOGGLE, toggle_text.as_ptr());
+        AppendMenuW(
+            menu,
+            MF_STRING | if awake { MF_CHECKED } else { MF_UNCHECKED },
+            CMD_TOGGLE,
+            toggle_text.as_ptr(),
+        );
+        AppendMenuW(
+            menu,
+            MF_STRING | if autostart { MF_CHECKED } else { MF_UNCHECKED },
+            CMD_AUTOSTART,
+            autostart_text.as_ptr(),
+        );
         AppendMenuW(menu, MF_SEPARATOR, 0, std::ptr::null());
         AppendMenuW(menu, MF_STRING, CMD_QUIT, quit_text.as_ptr());
 

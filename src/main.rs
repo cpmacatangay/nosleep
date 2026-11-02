@@ -6,6 +6,7 @@
 #![windows_subsystem = "windows"]
 
 mod app;
+mod autostart;
 mod diag;
 mod icon;
 mod menu;
@@ -28,7 +29,7 @@ use windows_sys::Win32::UI::HiDpi::{
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     CreateWindowExW, DefWindowProcW, DestroyWindow, DispatchMessageW, GetMessageW, PostQuitMessage,
     RegisterClassW, RegisterWindowMessageW, TranslateMessage, MSG, WNDCLASSW, WM_APP, WM_DESTROY,
-    WM_ENDSESSION, WM_QUERYENDSESSION, WS_POPUP,
+    WM_ENDSESSION, WM_QUERYENDSESSION, WM_TIMER, WS_POPUP,
 };
 
 use app::{Action, App};
@@ -123,6 +124,10 @@ unsafe fn run() {
         }
     });
 
+    // If the executable was moved since autostart was enabled, point the entry at
+    // where it lives now. A single read when autostart is off.
+    autostart::heal();
+
     let mut message: MSG = std::mem::zeroed();
     while GetMessageW(&mut message, null_mut(), 0, 0) > 0 {
         TranslateMessage(&message);
@@ -151,11 +156,23 @@ unsafe extern "system" fn window_proc(
                 }
                 Action::ShowMenu => {
                     let awake = with_app(|app| app.state.is_on()).unwrap_or(false);
+                    // Read fresh, so the tick reflects the registry rather than a
+                    // cached flag that could have drifted.
+                    let autostart_on = autostart::is_enabled();
                     // The menu runs a nested message loop, so it is shown with no
                     // borrow of the app state held.
-                    match menu::show(hwnd, awake) {
+                    match menu::show(hwnd, awake, autostart_on) {
                         menu::CMD_TOGGLE => {
                             with_app(|app| app.toggle());
+                        }
+                        menu::CMD_AUTOSTART => {
+                            // A failure leaves the stored state unchanged; the next
+                            // time the menu opens it shows the truth.
+                            if autostart_on {
+                                let _ = autostart::disable();
+                            } else {
+                                let _ = autostart::enable();
+                            }
                         }
                         menu::CMD_QUIT => quit(hwnd),
                         _ => {}
@@ -166,6 +183,10 @@ unsafe extern "system" fn window_proc(
             0
         }
         WM_QUERYENDSESSION => 1,
+        WM_TIMER => {
+            with_app(|app| app.on_timer(wparam));
+            0
+        }
         WM_ENDSESSION => {
             with_app(|app| app.shutdown());
             0

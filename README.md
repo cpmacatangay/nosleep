@@ -3,7 +3,7 @@
 [![release](https://img.shields.io/github/v/release/cpmacatangay/nosleep?label=download)](https://github.com/cpmacatangay/nosleep/releases/latest)
 [![build](https://img.shields.io/github/actions/workflow/status/cpmacatangay/nosleep/release.yml?label=build)](https://github.com/cpmacatangay/nosleep/actions)
 
-**v0.1.1** · Windows 10/11 (x64) · one executable under 1 MB · no installer
+**v2026.11.1** · Windows 10/11 (x64) · one executable under 1 MB · no installer
 
 One click keeps your PC awake. Built for laptops whose sleep timeout is set by
 policy, where every sleep costs a re-login and the work you had open.
@@ -19,7 +19,7 @@ Expand-Archive "$env:TEMP\NoSleep.zip" -DestinationPath $d -Force
 ```
 
 Or take the zip from [Releases](https://github.com/cpmacatangay/nosleep/releases/latest)
-and run `NoSleep.exe` in place — from a folder, a USB stick, anywhere.
+and run `NoSleep.exe` in place from any folder.
 
 > If Windows says it protected your PC, a browser downloaded the file. Run
 > `Unblock-File .\NoSleep.exe` first. The PowerShell route above never triggers it.
@@ -32,6 +32,10 @@ and run `NoSleep.exe` in place — from a folder, a USB stick, anywhere.
 | --- | --- | --- |
 | Off | hollow grey ring | normal sleep |
 | On | solid green disc | display and system stay awake |
+
+The menu also holds **Start with Windows**, off until you tick it. Ticking registers
+the app under your own account — no administrator rights, and it shows up in
+Windows' own startup controls, where you can disable it without touching NoSleep.
 
 Windows 11 hides new tray icons: click `^` and drag it onto the taskbar.
 
@@ -87,12 +91,13 @@ zip beside it.
 
 ## Release
 
-Bump the version in one command, then tag:
+Versions are calendar based: `YYYY.MM.N`, counting releases within the month. One
+command bumps it everywhere:
 
 ```powershell
-.\scripts\set-version.ps1 0.1.2
-git commit -am "chore: release v0.1.2"
-git tag v0.1.2
+.\scripts\set-version.ps1          # -> 2026.11.1
+git commit -am "chore: release v2026.11.1"
+git tag v2026.11.1
 git push origin master --tags
 ```
 
@@ -107,6 +112,7 @@ tag, `Cargo.toml`, and the version at the top of this file disagree.
 - hidden top-level window, so the tray icon survives an Explorer restart
 - statically linked CRT — no Visual C++ Redistributable needed
 - icons rasterised at the shell's real pixel size; no resource compiler
+- one registry value, written only if you enable Start with Windows
 
 Specification and history: [`specs/001-keep-awake/`](specs/001-keep-awake/).
 Principles: [`.specify/memory/constitution.md`](.specify/memory/constitution.md).

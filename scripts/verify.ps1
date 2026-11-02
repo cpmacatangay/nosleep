@@ -72,6 +72,11 @@ if ($dumpbin) {
     Info 'image checks' 'dumpbin not found; skipped'
 }
 
+# Informational only: autostart is opt-in, so both states are correct.
+$entry = (Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' -Name NoSleep -ErrorAction SilentlyContinue).NoSleep
+if ($entry) { Info 'autostart' "enabled -> $entry" }
+else { Info 'autostart' 'disabled (opt-in, untouched)' }
+
 # --- 3. power API --------------------------------------------------------
 # Start-Process -Wait is used rather than the call operator because a GUI-
 # subsystem executable is not reliably awaited by PowerShell, which would make
