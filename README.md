@@ -3,125 +3,12 @@
 [![release](https://img.shields.io/github/v/release/cpmacatangay/nosleep?label=download)](https://github.com/cpmacatangay/nosleep/releases/latest)
 [![build](https://img.shields.io/github/actions/workflow/status/cpmacatangay/nosleep/release.yml?label=build)](https://github.com/cpmacatangay/nosleep/actions)
 
-A one-click wake lock for Windows. Click the tray icon once and the machine
-neither sleeps nor turns off its display, until you click again.
+**v0.1.1** · Windows 10/11 (x64) · one executable under 1 MB · no installer
 
-Built for laptops whose sleep timeout is set by policy and cannot be changed, and
-where every sleep costs a re-login and the loss of working context.
+One click keeps your PC awake. Built for laptops whose sleep timeout is set by
+policy, where every sleep costs a re-login and the work you had open.
 
-**[Download the latest build](../../releases/latest/download/NoSleep-win64.zip)** —
-unzip anywhere and run `NoSleep.exe`. Nothing is installed.
-
-```
-  Off                                On
-  ○  normal sleep        ──click──▶  ●  keeping this PC awake
-```
-
-- **One click.** No window, no settings, no wizard.
-- **216 KB.** Single executable, no installer, no runtime.
-- **0.0% idle CPU**, ~9 MB working set, starts in milliseconds.
-- **No network, no telemetry, no files written, no registry writes, no admin rights.**
-- **Inert when Off.** Quit, crash, or kill the process and normal power behaviour
-  resumes immediately — the operating system releases the request with the process.
-
-## Use
-
-1. Copy `nosleep.exe` anywhere writable, for example `%LOCALAPPDATA%\NoSleep\`.
-2. Run it. An icon appears in the notification area.
-3. **Left-click** to toggle. **Right-click** for the menu (toggle, Quit).
-
-Windows 11 hides new tray icons by default. If you do not see it, click the `^`
-overflow chevron and drag the icon onto the taskbar, or use *Settings → Taskbar →
-Other system tray icons*.
-
-## What it does, precisely
-
-While On, the process holds an operating-system wake lock
-(`SetThreadExecutionState` with `ES_CONTINUOUS | ES_SYSTEM_REQUIRED |
-ES_DISPLAY_REQUIRED`). This is the same documented mechanism a video player or a
-video call uses to stop the screen from turning off during playback. The display
-stays on, so the session never reaches the idle lock screen.
-
-When Off, it releases the lock and nothing else changes.
-
-### What it does not do
-
-| | |
-|---|---|
-| **Bypass a security policy** | It does not touch power plans, policies, or the registry |
-| **Survive an enforced inactivity lock** | If IT configured *Interactive logon: Machine inactivity limit*, the screen locks regardless of this or any other app |
-| **Prevent sleep on lid close** | Firmware and the lid action decide that |
-| **Prevent hibernation at critical battery** | Windows will hibernate; that is correct behaviour |
-| **Block `Win+L`** | Manual locking always works |
-| **Start with Windows** | No autostart entry is created. Launch it yourself, or add a shortcut |
-
-## Verify it yourself
-
-```powershell
-.\nosleep.exe --diagnose
-```
-
-Reports whether the OS accepted the wake request. Exit code `0` means accepted,
-`2` means refused. This command releases the request immediately; it does not keep
-the PC awake.
-
-To verify the real behaviour, put the machine on battery, turn the app On, leave
-it alone for longer than the sleep timeout, then check that no sleep event was
-recorded:
-
-```powershell
-Get-WinEvent -FilterHashtable @{LogName='System'; Id=42,107; StartTime=(Get-Date).AddMinutes(-30)} |
-  Select-Object TimeCreated, Id
-```
-
-No event `42` (sleep) in the window means it worked.
-
-## Portable package
-
-To produce a folder and a zip that can be carried to another machine:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\package.ps1
-```
-
-Output:
-
-```text
-dist\NoSleep\NoSleep.exe     the application, self-contained
-dist\NoSleep\README.txt      instructions for the target machine
-dist\NoSleep\SHA256.txt      checksum, to confirm the copy survived transfer
-dist\NoSleep-0.1.0-win64.zip
-```
-
-The executable has no external dependencies, reads no files, and writes none, so
-the folder runs in place — from `%LOCALAPPDATA%`, from a USB stick, from a path
-with spaces. There is nothing to install and nothing to uninstall; deleting the
-executable is a complete removal.
-
-When transferring, prefer a USB stick or clear the download mark on arrival:
-
-```powershell
-Unblock-File .\NoSleep.exe
-```
-
-## Releases
-
-Tagging a commit publishes a build automatically:
-
-```powershell
-git tag v0.1.0
-git push origin v0.1.0
-```
-
-`.github/workflows/release.yml` runs the unit tests, the static checks, and the
-packaging script, then attaches `NoSleep-0.1.0-win64.zip` to a GitHub release. It
-also fails the build if the tag and the version in `Cargo.toml` disagree.
-
-Downloading a release asset attaches a Mark-of-the-Web, so Windows will show
-"Windows protected your PC" on first launch. Two ways to avoid it entirely.
-
-**Install without ever touching a browser** — PowerShell sets no download mark,
-and `Expand-Archive` does not propagate one:
+## Install
 
 ```powershell
 $d = "$env:LOCALAPPDATA\NoSleep"
@@ -131,50 +18,98 @@ Expand-Archive "$env:TEMP\NoSleep.zip" -DestinationPath $d -Force
 & "$d\NoSleep.exe"
 ```
 
-**Or clear the mark after the fact:**
+Or take the zip from [Releases](https://github.com/cpmacatangay/nosleep/releases/latest)
+and run `NoSleep.exe` in place — from a folder, a USB stick, anywhere.
+
+> If Windows says it protected your PC, a browser downloaded the file. Run
+> `Unblock-File .\NoSleep.exe` first. The PowerShell route above never triggers it.
+
+## Use
+
+**Left-click** the tray icon to toggle. **Right-click** for the menu.
+
+| State | Icon | Meaning |
+| --- | --- | --- |
+| Off | hollow grey ring | normal sleep |
+| On | solid green disc | display and system stay awake |
+
+Windows 11 hides new tray icons: click `^` and drag it onto the taskbar.
+
+## How it works
+
+While On, NoSleep holds
+`SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED)`
+— the same mechanism a video call uses. The display stays on, so the idle lock
+screen never appears.
+
+When Off — or when the process exits, crashes, or is killed — the request is
+released and normal power behaviour resumes immediately.
+
+### Limits
+
+| | |
+| --- | --- |
+| Security policy | never touches power plans, policy, or the registry |
+| Enforced inactivity lock | if IT set one, the screen locks anyway |
+| Lid close, critical battery | firmware and Windows decide; NoSleep does not interfere |
+| Autostart | none; launch it yourself |
+
+## Verify
 
 ```powershell
-Unblock-File .\NoSleep.exe
+.\NoSleep.exe --diagnose     # exit 0 = the OS accepted the wake request
 ```
 
-Note that extracting with Windows Explorer's *Extract All* copies the mark from
-the zip onto the executable, so unblocking the **zip before extracting** also
-works. Check either file with:
+For the real thing: unplug the charger, turn it On, leave it alone past the sleep
+timeout, then confirm no sleep event was recorded.
 
 ```powershell
-Get-Item .\NoSleep.exe -Stream Zone.Identifier    # no output means no mark
+Get-WinEvent -FilterHashtable @{LogName='System'; Id=42} -MaxEvents 5 |
+  Select-Object TimeCreated
 ```
 
 ## Build
 
-Requires Rust (MSVC toolchain) and the Visual C++ build tools.
+Needs Rust (MSVC) and the Visual C++ build tools.
 
 ```powershell
-cargo build --release
 cargo test --release
+cargo build --release
 powershell -ExecutionPolicy Bypass -File .\scripts\verify.ps1
 ```
 
-`scripts/verify.ps1` checks the size budget, the GUI subsystem, the import table
-(no non-Windows dependencies), the power API, single-instance behaviour, tray-icon
-registration, memory, and idle CPU.
+`verify.ps1` checks the size budget, GUI subsystem, import table, wake request,
+single instance, tray registration, memory and idle CPU. `-StaticOnly` skips the
+parts that need an interactive desktop.
+
+`.\scripts\package.ps1` writes a portable folder to `dist\NoSleep\` and a versioned
+zip beside it.
+
+## Release
+
+Bump the version in one command, then tag:
+
+```powershell
+.\scripts\set-version.ps1 0.1.2
+git commit -am "chore: release v0.1.2"
+git tag v0.1.2
+git push origin master --tags
+```
+
+`.github/workflows/release.yml` builds on `windows-latest`, runs the tests and
+static checks, and attaches `NoSleep-win64.zip` to the release. It fails if the
+tag, `Cargo.toml`, and the version at the top of this file disagree.
 
 ## Design
 
-Detailed specification, plan, and task history live in
-[`specs/001-keep-awake/`](specs/001-keep-awake/). Project principles are in
-[`.specify/memory/constitution.md`](.specify/memory/constitution.md).
+- one dependency (`windows-sys`); no GUI framework, no async runtime
+- the wake request is owned by an RAII guard, so no exit path can strand it
+- hidden top-level window, so the tray icon survives an Explorer restart
+- statically linked CRT — no Visual C++ Redistributable needed
+- icons rasterised at the shell's real pixel size; no resource compiler
 
-The short version:
-
-- ONE dependency (`windows-sys`), no GUI framework, no async runtime.
-- The wake request is an RAII guard, so no exit path can leave the machine awake.
-- A hidden top-level window (not message-only) so the tray icon survives an
-  Explorer restart.
-- The C runtime is linked statically, so the executable does not need the Visual
-  C++ Redistributable.
-- Icons are rasterised at the shell's real pixel size instead of shipping `.ico`
-  files, which keeps the build free of resource compilation and the edges crisp.
+Specification and history: [`specs/001-keep-awake/`](specs/001-keep-awake/).
+Principles: [`.specify/memory/constitution.md`](.specify/memory/constitution.md).
 
 ## Licence
 
