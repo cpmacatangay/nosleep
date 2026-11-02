@@ -114,8 +114,8 @@ tag, `Cargo.toml`, and the version at the top of this file disagree.
 - icons rasterised at the shell's real pixel size; no resource compiler
 - one registry value, written only if you enable Start with Windows
 
-Specification and history: [`specs/001-keep-awake/`](specs/001-keep-awake/).
-Principles: [`.specify/memory/constitution.md`](.specify/memory/constitution.md).
+Specification and history: [`specs/001-keep-awake/`](specs/001-keep-awake/) and
+[`specs/002-autostart/`](specs/002-autostart/).
 
 ## Licence
 
