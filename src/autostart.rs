@@ -217,8 +217,11 @@ mod tests {
     use super::{delete_key, delete_value, read_value, write_value};
 
     // A throwaway key outside the real Run key, so tests never touch autostart.
+    // Each test owns its own key: cargo runs tests in parallel, and sharing one
+    // key made the empty-value test race the missing-value test.
     const KEY_A: &str = "Software\\NoSleepAutostartTestA";
     const KEY_B: &str = "Software\\NoSleepAutostartTestB";
+    const KEY_C: &str = "Software\\NoSleepAutostartTestC";
     const VALUE: &str = "Entry";
 
     #[test]
@@ -255,10 +258,10 @@ mod tests {
 
     #[test]
     fn an_empty_value_is_not_mistaken_for_a_path() {
-        let _ = delete_key(KEY_B);
-        assert!(write_value(KEY_B, VALUE, ""));
-        assert_eq!(read_value(KEY_B, VALUE).as_deref(), Some(""));
-        assert!(delete_key(KEY_B), "cleanup");
+        let _ = delete_key(KEY_C);
+        assert!(write_value(KEY_C, VALUE, ""));
+        assert_eq!(read_value(KEY_C, VALUE).as_deref(), Some(""));
+        assert!(delete_key(KEY_C), "cleanup");
     }
 
     #[test]
