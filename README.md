@@ -98,6 +98,33 @@ When transferring, prefer a USB stick or clear the download mark on arrival:
 Unblock-File .\NoSleep.exe
 ```
 
+## Releases
+
+Tagging a commit publishes a build automatically:
+
+```powershell
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+`.github/workflows/release.yml` runs the unit tests, the static checks, and the
+packaging script, then attaches `NoSleep-0.1.0-win64.zip` to a GitHub release. It
+also fails the build if the tag and the version in `Cargo.toml` disagree.
+
+Downloading a release asset attaches a Mark-of-the-Web, so Windows will show
+"Windows protected your PC" on first launch. Either clear it, or download with the
+GitHub CLI, which does not add the mark:
+
+```powershell
+gh release download --pattern 'NoSleep-win64.zip'
+```
+
+The asset name is deliberately constant, so the latest build always lives at:
+
+```text
+https://github.com/<owner>/nosleep/releases/latest/download/NoSleep-win64.zip
+```
+
 ## Build
 
 Requires Rust (MSVC toolchain) and the Visual C++ build tools.

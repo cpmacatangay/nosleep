@@ -2,15 +2,20 @@
 <#
     NoSleep verification.
 
-    Checks, in order of cost:
+    Static checks (safe everywhere, including a headless CI runner):
       1. the release binary exists and is under budget
       2. it is a GUI-subsystem image with no non-Windows dependencies
       3. the power API accepts the request (--diagnose exit code)
+
+    Runtime checks (need an interactive desktop, so skipped with -StaticOnly):
       4. the process starts, registers a tray icon, refuses a second instance,
          and sits idle without burning CPU
 
     Everything here is read-only except starting and stopping our own process.
 #>
+param(
+    [switch]$StaticOnly
+)
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
@@ -68,7 +73,10 @@ if ($LASTEXITCODE -eq 0) { Pass 'wake request' 'accepted by the OS' }
 else { Fail 'wake request' "SetThreadExecutionState refused (exit $LASTEXITCODE)" }
 
 # --- 4. runtime ----------------------------------------------------------
-Add-Type @"
+if ($StaticOnly) {
+    Info 'runtime checks' 'skipped (-StaticOnly)'
+} else {
+    Add-Type @"
 using System;
 using System.Runtime.InteropServices;
 
@@ -95,68 +103,72 @@ public static class NoSleepProbe {
 }
 "@
 
-Get-Process nosleep -ErrorAction SilentlyContinue | Stop-Process -Force
-Start-Sleep -Milliseconds 300
+    Get-Process nosleep -ErrorAction SilentlyContinue | Stop-Process -Force
+    Start-Sleep -Milliseconds 300
 
-$process = Start-Process -FilePath $exe -PassThru
-try {
-    Start-Sleep -Milliseconds 800
+    $process = Start-Process -FilePath $exe -PassThru
+    try {
+        Start-Sleep -Milliseconds 800
 
-    if ($process.HasExited) { Fail 'startup' 'process exited immediately'; return }
-    Pass 'startup' 'running'
+        if ($process.HasExited) {
+            Fail 'startup' 'process exited immediately'
+        } else {
+            Pass 'startup' 'running'
 
-    $hwnd = [NoSleepProbe]::FindWindow('NoSleepTrayWindow', 'NoSleep')
-    if ($hwnd -ne [IntPtr]::Zero) { Pass 'hidden window' 'created' }
-    else { Fail 'hidden window' 'not found' }
+            $hwnd = [NoSleepProbe]::FindWindow('NoSleepTrayWindow', 'NoSleep')
+            if ($hwnd -ne [IntPtr]::Zero) { Pass 'hidden window' 'created' }
+            else { Fail 'hidden window' 'not found' }
 
-    # A second launch must be a no-op.
-    $second = Start-Process -FilePath $exe -PassThru
-    Start-Sleep -Milliseconds 700
-    $count = @(Get-Process nosleep -ErrorAction SilentlyContinue).Count
-    if ($count -eq 1) { Pass 'single instance' 'second launch exited' }
-    else { Fail 'single instance' "$count processes running" }
-    if (-not $second.HasExited) { $second | Stop-Process -Force }
+            # A second launch must be a no-op.
+            $second = Start-Process -FilePath $exe -PassThru
+            Start-Sleep -Milliseconds 700
+            $count = @(Get-Process nosleep -ErrorAction SilentlyContinue).Count
+            if ($count -eq 1) { Pass 'single instance' 'second launch exited' }
+            else { Fail 'single instance' "$count processes running" }
+            if (-not $second.HasExited) { $second | Stop-Process -Force }
 
-    # Ask the shell whether our icon is registered. This works even when the
-    # icon is tucked into the overflow area.
-    if ($hwnd -ne [IntPtr]::Zero) {
-        $id = New-Object NoSleepProbe+NOTIFYICONIDENTIFIER
-        $id.cbSize = [Runtime.InteropServices.Marshal]::SizeOf([type]'NoSleepProbe+NOTIFYICONIDENTIFIER')
-        $id.hWnd = $hwnd
-        $id.uID = 1
-        $rect = New-Object NoSleepProbe+RECT
-        $hr = [NoSleepProbe]::Shell_NotifyIconGetRect([ref]$id, [ref]$rect)
-        if ($hr -eq 0) { Pass 'tray icon' ("registered at {0},{1}" -f $rect.Left, $rect.Top) }
-        else { Fail 'tray icon' ("Shell_NotifyIconGetRect -> 0x{0:X8}" -f $hr) }
+            # Ask the shell whether our icon is registered. This works even when
+            # the icon is tucked into the overflow area.
+            if ($hwnd -ne [IntPtr]::Zero) {
+                $id = New-Object NoSleepProbe+NOTIFYICONIDENTIFIER
+                $id.cbSize = [Runtime.InteropServices.Marshal]::SizeOf([type]'NoSleepProbe+NOTIFYICONIDENTIFIER')
+                $id.hWnd = $hwnd
+                $id.uID = 1
+                $rect = New-Object NoSleepProbe+RECT
+                $hr = [NoSleepProbe]::Shell_NotifyIconGetRect([ref]$id, [ref]$rect)
+                if ($hr -eq 0) { Pass 'tray icon' ("registered at {0},{1}" -f $rect.Left, $rect.Top) }
+                else { Fail 'tray icon' ("Shell_NotifyIconGetRect -> 0x{0:X8}" -f $hr) }
 
-        # Exercise the click path: WM_APP+1 with NIN_SELECT in the low word.
-        $wmTray = 0x8001
-        $ninSelect = 0x0400
-        [void][NoSleepProbe]::PostMessage($hwnd, $wmTray, [IntPtr]::Zero, [IntPtr]$ninSelect)
-        Start-Sleep -Milliseconds 300
-        if (-not $process.HasExited) { Pass 'toggle path' 'On transition survived' }
-        else { Fail 'toggle path' 'process died on toggle' }
+                # Exercise the click path: WM_APP+1 with NIN_SELECT in the low word.
+                $wmTray = 0x8001
+                $ninSelect = 0x0400
+                [void][NoSleepProbe]::PostMessage($hwnd, $wmTray, [IntPtr]::Zero, [IntPtr]$ninSelect)
+                Start-Sleep -Milliseconds 300
+                if (-not $process.HasExited) { Pass 'toggle path' 'On transition survived' }
+                else { Fail 'toggle path' 'process died on toggle' }
 
-        [void][NoSleepProbe]::PostMessage($hwnd, $wmTray, [IntPtr]::Zero, [IntPtr]$ninSelect)
-        Start-Sleep -Milliseconds 300
-        if (-not $process.HasExited) { Pass 'toggle path' 'Off transition survived' }
-        else { Fail 'toggle path' 'process died on toggle' }
+                [void][NoSleepProbe]::PostMessage($hwnd, $wmTray, [IntPtr]::Zero, [IntPtr]$ninSelect)
+                Start-Sleep -Milliseconds 300
+                if (-not $process.HasExited) { Pass 'toggle path' 'Off transition survived' }
+                else { Fail 'toggle path' 'process died on toggle' }
+            }
+
+            $process.Refresh()
+            $ramMb = $process.WorkingSet64 / 1MB
+            if ($ramMb -le 10) { Pass 'working set' ("{0:N1} MB <= 10 MB" -f $ramMb) }
+            else { Fail 'working set' ("{0:N1} MB > 10 MB" -f $ramMb) }
+
+            $cpu0 = $process.TotalProcessorTime.TotalMilliseconds
+            Start-Sleep -Seconds 2
+            $process.Refresh()
+            $cpuDelta = $process.TotalProcessorTime.TotalMilliseconds - $cpu0
+            if ($cpuDelta -lt 20) { Pass 'idle CPU' ("{0:N0} ms over 2 s" -f $cpuDelta) }
+            else { Fail 'idle CPU' ("{0:N0} ms over 2 s" -f $cpuDelta) }
+        }
     }
-
-    $process.Refresh()
-    $ramMb = $process.WorkingSet64 / 1MB
-    if ($ramMb -le 10) { Pass 'working set' ("{0:N1} MB <= 10 MB" -f $ramMb) }
-    else { Fail 'working set' ("{0:N1} MB > 10 MB" -f $ramMb) }
-
-    $cpu0 = $process.TotalProcessorTime.TotalMilliseconds
-    Start-Sleep -Seconds 2
-    $process.Refresh()
-    $cpuDelta = $process.TotalProcessorTime.TotalMilliseconds - $cpu0
-    if ($cpuDelta -lt 20) { Pass 'idle CPU' ("{0:N0} ms over 2 s" -f $cpuDelta) }
-    else { Fail 'idle CPU' ("{0:N0} ms over 2 s" -f $cpuDelta) }
-}
-finally {
-    if (-not $process.HasExited) { $process | Stop-Process -Force }
+    finally {
+        if (-not $process.HasExited) { $process | Stop-Process -Force }
+    }
 }
 
 Write-Host ("=" * 60)
