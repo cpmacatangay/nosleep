@@ -43,7 +43,7 @@ jobs:
         shell: pwsh
         run: |
           $cargo = (Select-String -Path Cargo.toml -Pattern '^version = "([^"]+)"').Matches[0].Groups[1].Value
-          $match = Select-String -Path README.md -Pattern '\*\*v(\d+\.\d+\.\d+)\*\*'
+          $match = Select-String -Path README.md -Pattern '\*\*v([0-9]+\.[0-9]+\.[0-9]+(\+v[0-9]+)?)\*\*'
           if (-not $match) { throw 'README.md is missing its **vX.Y.Z** line' }
           $readme = $match.Matches[0].Groups[1].Value
           if ($cargo -ne $readme) {

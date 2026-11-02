@@ -2,8 +2,15 @@
 <#
     Bump the version everywhere it is written down.
 
-    Versioning is calendar based: YYYY.MM.N, where N counts releases within the
-    month starting at 1. Examples: 2026.11.1, 2026.11.2, 2026.12.1.
+    Versioning is calendar based:
+
+        YYYY.M.D          first release on that day,   e.g. 2026.11.2
+        YYYY.M.D+vN       later release that day,      e.g. 2026.11.2+v2
+
+    The month and day carry no leading zero because SemVer rejects them, and the
+    sequence uses build metadata because a bare "v2" suffix is not a valid
+    version. Everything that reports a version - the tag, Cargo.toml, the README
+    and --diagnose - therefore shows the same string.
 
     The version lives in exactly two files: Cargo.toml (the source of truth for
     the binary) and the line under the title in README.md. Cargo.lock follows from
@@ -11,7 +18,7 @@
     and the README disagree, so this script is the only supported way to change it.
 
     Usage:
-        .\scripts\set-version.ps1        # next release for the current month
+        .\scripts\set-version.ps1        # derive today's next release
         .\scripts\set-version.ps1 2026.12.1
 #>
 param(
@@ -25,20 +32,24 @@ $root = Split-Path -Parent $PSScriptRoot
 Push-Location $root
 try {
     if ([string]::IsNullOrWhiteSpace($Version)) {
-        $month = (Get-Date).ToString('yyyy.MM')
-        $existing = & git tag --list "v$month.*" 2>$null
+        $base = (Get-Date).ToString('yyyy.M.d')
+        $escaped = [regex]::Escape($base)
+
+        # The bare date is the first release of the day; anything after it is +vN.
         $highest = 0
-        foreach ($tag in $existing) {
-            if ($tag -match "^v$([regex]::Escape($month))\.(\d+)$") {
+        if (& git tag --list "v$base") { $highest = 1 }
+        foreach ($tag in (& git tag --list "v$base+v*")) {
+            if ($tag -match "^v$escaped\+v(\d+)$") {
                 $n = [int]$Matches[1]
                 if ($n -gt $highest) { $highest = $n }
             }
         }
-        $Version = "$month.$($highest + 1)"
+
+        $Version = if ($highest -eq 0) { $base } else { "$base+v$($highest + 1)" }
     }
 
-    if ($Version -notmatch '^\d{4}\.(0[1-9]|1[0-2])\.\d+$') {
-        throw "Version must be calendar form YYYY.MM.N, e.g. 2026.11.1 - got '$Version'"
+    if ($Version -notmatch '^\d{4}\.([1-9]|1[0-2])\.([1-9]|[12]\d|3[01])(\+v\d+)?$') {
+        throw "Version must be YYYY.M.D or YYYY.M.D+vN with no leading zeros, e.g. 2026.11.2 or 2026.11.2+v2 - got '$Version'"
     }
 
     function Set-Text([string]$path, [string]$text) {
@@ -57,10 +68,11 @@ try {
 
     $readmePath = Join-Path $root 'README.md'
     $readme = [System.IO.File]::ReadAllText($readmePath)
-    if ($readme -notmatch '\*\*v\d+\.\d+\.\d+\*\*') {
+    $readmePattern = '\*\*v[0-9]+\.[0-9]+\.[0-9]+(\+v[0-9]+)?\*\*'
+    if ($readme -notmatch $readmePattern) {
         throw 'README.md has no "**vX.Y.Z**" line to update'
     }
-    Set-Text $readmePath ([regex]::Replace($readme, '\*\*v\d+\.\d+\.\d+\*\*', "**v$Version**", 1))
+    Set-Text $readmePath ([regex]::Replace($readme, $readmePattern, "**v$Version**", 1))
 
     # Refresh Cargo.lock so the lockfile records the new package version.
     $env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"

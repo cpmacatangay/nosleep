@@ -91,15 +91,19 @@ zip beside it.
 
 ## Release
 
-Versions are calendar based: `YYYY.MM.N`, counting releases within the month. One
-command bumps it everywhere:
+Versions are calendar based, and one command bumps them everywhere:
 
 ```powershell
-.\scripts\set-version.ps1          # -> 2026.11.1
-git commit -am "chore: release v2026.11.1"
-git tag v2026.11.1
+.\scripts\set-version.ps1          # -> 2026.11.2
+git commit -am "chore: release v2026.11.2"
+git tag v2026.11.2
 git push origin master --tags
 ```
+
+The first release of a day is `YYYY.M.D`; later ones that day add build metadata,
+`2026.11.2+v2`, then `+v3`. Month and day carry no leading zero because SemVer
+rejects them, so the tag, `Cargo.toml`, this README and `--diagnose` all show the
+same string.
 
 `.github/workflows/release.yml` builds on `windows-latest`, runs the tests and
 static checks, and attaches `NoSleep-win64.zip` to the release. It fails if the
